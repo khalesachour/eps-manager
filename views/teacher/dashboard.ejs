@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Espace Enseignant - Gestion EPS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .sidebar {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #2c3e50 0%, #1a2632 100%);
+        }
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.8);
+            padding: 12px 20px;
+            margin: 5px 0;
+            border-radius: 10px;
+        }
+        .sidebar .nav-link:hover {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+        .sidebar .nav-link.active {
+            background: #3498db;
+            color: white;
+        }
+        .card-stats {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            transition: transform 0.2s;
+        }
+        .card-stats:hover {
+            transform: translateY(-5px);
+        }
+        .welcome-banner {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            padding: 30px;
+            color: white;
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-2 p-0">
+                <div class="sidebar p-3">
+                    <h4 class="text-white text-center mb-4">
+                        <i class="bi bi-trophy-fill"></i> EPS Manager
+                    </h4>
+                    <hr class="bg-white">
+                    <p class="text-white-50 text-center small">
+                        <i class="bi bi-person-circle"></i> <%= user.full_name %><br>
+                        <span class="badge bg-info">Enseignant</span>
+                    </p>
+                    <hr class="bg-white">
+                    <nav class="nav flex-column">
+                        <a class="nav-link active" href="/teacher/dashboard">
+                            <i class="bi bi-speedometer2 me-2"></i> Tableau de bord
+                        </a>
+                        <a class="nav-link" href="/teacher/students">
+                            <i class="bi bi-people me-2"></i> Gestion élèves
+                        </a>
+                        <a class="nav-link" href="/teacher/criteria">
+                            <i class="bi bi-sliders2 me-2"></i> Configurer critères
+                        </a>
+                        <a class="nav-link" href="/teacher/evaluations">
+                            <i class="bi bi-clipboard-check me-2"></i> Évaluations
+                        </a>
+                        <a class="nav-link" href="#">
+                            <i class="bi bi-file-excel me-2"></i> Export Excel
+                        </a>
+                        <hr class="bg-white">
+                        <a class="nav-link text-danger" href="/logout">
+                            <i class="bi bi-box-arrow-right me-2"></i> Déconnexion
+                        </a>
+                    </nav>
+                </div>
+            </div>
+            
+            <!-- Main Content -->
+            <div class="col-md-10 p-4">
+                <div class="welcome-banner">
+                    <h2><i class="bi bi-emoji-smile"></i> Bonjour, <%= user.full_name %> !</h2>
+                    <p class="mb-0">Bienvenue sur votre espace de gestion des notes EPS. Configurez vos évaluations et suivez les progrès de vos élèves.</p>
+                </div>
+                
+  <div class="row">
+    <div class="col-md-4 mb-3">
+        <div class="card card-stats">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted">Vos classes</h6>
+                        <h2 class="mb-0"><%= stats.classes %></h2>
+                    </div>
+                    <i class="bi bi-building fs-1 text-primary opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card card-stats">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted">Élèves</h6>
+                        <h2 class="mb-0"><%= stats.students %></h2>
+                    </div>
+                    <i class="bi bi-people fs-1 text-success opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card card-stats">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted">Évaluations</h6>
+                        <h2 class="mb-0"><%= stats.evaluations %></h2>
+                    </div>
+                    <i class="bi bi-check2-circle fs-1 text-warning opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+                
+                <div class="alert alert-info mt-3">
+                    <i class="bi bi-info-circle-fill"></i> 
+                    <strong>Notes importantes :</strong><br>
+                    • <strong>Gymnastique :</strong> A = 0.75, B = 1.25, C = 1.75<br>
+                    • <strong>Course de vitesse :</strong> 60m pour les filles, 80m pour les garçons<br>
+                    • <strong>Course de durée :</strong> 600m pour les filles, 1000m pour les garçons
+              </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

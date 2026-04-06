@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des élèves - EPS Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        body { background-color: #f8f9fa; }
+        .sidebar {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #2c3e50 0%, #1a2632 100%);
+        }
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.8);
+            padding: 12px 20px;
+            margin: 5px 0;
+            border-radius: 10px;
+        }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+        }
+        .class-card {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .class-card:hover {
+            transform: translateY(-2px);
+        }
+        .class-card.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .class-card.active .text-muted {
+            color: rgba(255,255,255,0.8) !important;
+        }
+        .class-actions {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: none;
+        }
+        .class-card:hover .class-actions {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-2 p-0">
+                <div class="sidebar p-3">
+                    <h4 class="text-white text-center mb-4">
+                        <i class="bi bi-trophy-fill"></i> EPS Manager
+                    </h4>
+                    <hr class="bg-white">
+                    <p class="text-white-50 text-center small">
+                        <i class="bi bi-person-circle"></i> <%= user.full_name %><br>
+                        <span class="badge bg-info">Enseignant</span>
+                    </p>
+                    <hr class="bg-white">
+                    <nav class="nav flex-column">
+                        <a class="nav-link" href="/teacher/dashboard">
+                            <i class="bi bi-speedometer2 me-2"></i> Tableau de bord
+                        </a>
+                        <a class="nav-link active" href="/teacher/students">
+                            <i class="bi bi-people me-2"></i> Gestion élèves
+                        </a>
+                        <a class="nav-link" href="/teacher/criteria">
+                            <i class="bi bi-sliders2 me-2"></i> Configurer critères
+                        </a>
+                        <a class="nav-link" href="/teacher/evaluations">
+                            <i class="bi bi-clipboard-check me-2"></i> Évaluations
+                        </a>
+                        <hr class="bg-white">
+                        <a class="nav-link text-danger" href="/logout">
+                            <i class="bi bi-box-arrow-right me-2"></i> Déconnexion
+                        </a>
+                    </nav>
+                </div>
+            </div>
+            
+            <!-- Main Content -->
+            <div class="col-md-10 p-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-people-fill me-2"></i> Gestion des élèves</h2>
+    <div>
+        <button class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#importExcelModal">
+            <i class="bi bi-file-earmark-excel"></i> Importer Excel
+        </button>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addStudentModal">
+            <i class="bi bi-person-plus"></i> Ajouter un élève
+        </button>
+    </div>
+</div>
+                
+                <% if (error) { %>
+                    <div class="alert alert-danger alert-dismissible fade show">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i> <%= error %>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                <% } %>
+                <% if (success) { %>
+                    <div class="alert alert-success alert-dismissible fade show">
+                        <i class="bi bi-check-circle-fill me-2"></i> <%= success %>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                <% } %>
+                
+                <!-- Section MES CLASSES -->
+                <div class="card mb-4">
+                    <div class="card-header bg-white py-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><i class="bi bi-building me-2"></i> Mes classes</h5>
+                            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#createClassModal">
+                                <i class="bi bi-plus-circle"></i> Nouvelle classe
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <% if (classes.length === 0) { %>
+                                <div class="col-12 text-center text-muted py-4">
+                                    <i class="bi bi-folder2-open fs-1 d-block mb-2"></i>
+                                    Aucune classe créée. Cliquez sur "Nouvelle classe" pour commencer.
+                                </div>
+                            <% } else { %>
+                                <% for(var i = 0; i < classes.length; i++) { 
+                                    var cls = classes[i];
+                                %>
+                                <div class="col-md-3 mb-3">
+                                    <div class="class-card card <%= (activeClass && activeClass.id === cls.id) ? 'active' : '' %>" 
+                                         onclick="activateClass(<%= cls.id %>)">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <div>
+                                                    <i class="bi bi-folder-fill fs-3"></i>
+                                                    <h6 class="mt-2 mb-0"><%= cls.name %></h6>
+                                                    <small class="text-muted"><%= cls.academic_year %></small>
+                                                </div>
+                                                <div class="class-actions">
+                                                    <button class="btn btn-sm btn-outline-light" onclick="event.stopPropagation(); renameClass(<%= cls.id %>, '<%= cls.name %>')">
+                                                        <i class="bi bi-pencil"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-outline-light" onclick="event.stopPropagation(); deleteClass(<%= cls.id %>)">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <% if (activeClass && activeClass.id === cls.id) { %>
+                                                <div class="mt-2">
+                                                    <span class="badge bg-success">Active</span>
+                                                </div>
+                                            <% } %>
+                                        </div>
+                                    </div>
+                                </div>
+                                <% } %>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Liste des élèves de la classe active -->
+                <% if (activeClass) { %>
+                <div class="card">
+                    <div class="card-header bg-white py-3">
+                        <h5 class="mb-0"><i class="bi bi-table me-2"></i> Élèves de la classe : <%= activeClass.name %></h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Nom complet</th>
+                                        <th>N° étudiant</th>
+                                        <th>Sexe</th>
+                                        <th>Date de naissance</th>
+                                        <th>Identifiant</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% if (students.length === 0) { %>
+                                        <tr class="text-center">
+                                            <td colspan="7" class="text-center py-4 text-muted">
+                                                <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                                Aucun élève dans cette classe
+                                            </td>
+                                        </tr>
+                                    <% } else { %>
+                                        <% for(var i = 0; i < students.length; i++) { 
+                                            var student = students[i];
+                                        %>
+                                        <tr>
+                                             <td><%= i + 1 %></td>
+                                             <td><strong><%= student.full_name %></strong></td>
+                                             <td><code><%= student.student_number %></code></td>
+                                             <td>
+                                                <% if (student.gender === 'M') { %>
+                                                    <span class="badge bg-info">Garçon</span>
+                                                <% } else { %>
+                                                    <span class="badge bg-warning">Fille</span>
+                                                <% } %>
+                                             </td>
+                                             <td><%= student.birth_date ? new Date(student.birth_date).toLocaleDateString('fr-FR') : '-' %></td>
+                                             <td><%= student.username %></td>
+                                             <td>
+                                                <a href="/teacher/edit-student/<%= student.id %>" class="btn btn-sm btn-outline-primary me-1">
+                                                    <i class="bi bi-pencil"></i> Modifier
+                                                </a>
+                                                <form action="/teacher/delete-student/<%= student.id %>" method="POST" style="display:inline;" onsubmit="return confirm('Supprimer cet élève ?')">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                        <i class="bi bi-trash"></i> Supprimer
+                                                    </button>
+                                                </form>
+                                             </td>
+                                        </tr>
+                                        <% } %>
+                                    <% } %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <% } %>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal Créer une classe -->
+    <div class="modal fade" id="createClassModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form action="/teacher/create-class" method="POST">
+                    <div class="modal-header">
+                        <h5 class="modal-title"><i class="bi bi-folder-plus"></i> Créer une classe</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Nom de la classe</label>
+                            <input type="text" name="class_name" class="form-control" placeholder="Ex: 1ère AC A" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Année scolaire</label>
+                            <input type="text" name="academic_year" class="form-control" placeholder="Ex: 2024-2025" value="2024-2025">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-primary">Créer</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal Ajouter un élève -->
+    <div class="modal fade" id="addStudentModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form action="/teacher/add-student" method="POST">
+                    <div class="modal-header">
+                        <h5 class="modal-title"><i class="bi bi-person-plus"></i> Ajouter un élève</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Nom complet *</label>
+                            <input type="text" name="full_name" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Numéro d'étudiant *</label>
+                            <input type="text" name="student_number" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Sexe *</label>
+                            <select name="gender" class="form-select" required>
+                                <option value="">Sélectionner</option>
+                                <option value="M">Garçon</option>
+                                <option value="F">Fille</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Date de naissance</label>
+                            <input type="date" name="birth_date" class="form-control">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Classe</label>
+                            <select name="class_id" class="form-select">
+                                <option value="">Sans classe</option>
+                                <% for(var i = 0; i < classes.length; i++) { 
+                                    var cls = classes[i];
+                                %>
+                                    <option value="<%= cls.id %>"><%= cls.name %></option>
+                                <% } %>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-primary">Ajouter</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function activateClass(classId) {
+            fetch('/teacher/activate-class/' + classId, { method: 'POST' })
+                .then(function() { window.location.reload(); });
+        }
+        
+        function renameClass(classId, currentName) {
+            var newName = prompt('Nouveau nom de la classe :', currentName);
+            if (newName && newName.trim() !== '') {
+                fetch('/teacher/rename-class/' + classId, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'new_name=' + encodeURIComponent(newName)
+                }).then(function() { window.location.reload(); });
+            }
+        }
+        
+        function deleteClass(classId) {
+            if (confirm('Supprimer cette classe ? Les élèves ne seront pas supprimés mais ne seront plus associés à une classe.')) {
+                fetch('/teacher/delete-class/' + classId, { method: 'POST' })
+                    .then(function() { window.location.reload(); });
+            }
+        }
+    </script>
+    <!-- Modal Importer Excel -->
+<div class="modal fade" id="importExcelModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-file-earmark-excel"></i> Importer une liste d'élèves</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="/teacher/import-students" method="POST" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle-fill me-2"></i>
+                        <strong>Format attendu du fichier Excel :</strong><br>
+                        <ul class="mb-0 mt-2">
+                            <li>Colonne A : Nom complet</li>
+                            <li>Colonne B : Numéro d'étudiant</li>
+                            <li>Colonne C : Sexe (M ou F)</li>
+                            <li>Colonne D : Date de naissance (optionnel)</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Fichier Excel (.xlsx ou .xls)</label>
+                        <input type="file" name="excelFile" class="form-control" accept=".xlsx,.xls" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Classe d'affectation</label>
+                        <select name="class_id" class="form-select" required>
+                            <option value="">Sélectionner une classe</option>
+                            <% for(var i = 0; i < classes.length; i++) { 
+                                var cls = classes[i];
+                            %>
+                                <option value="<%= cls.id %>"><%= cls.name %></option>
+                            <% } %>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <a href="/teacher/download-template" class="btn btn-outline-info">
+                        <i class="bi bi-download"></i> Télécharger le modèle
+                    </a>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-upload"></i> Importer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>

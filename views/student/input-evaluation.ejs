@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saisir mes données - EPS Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        body { background-color: #f8f9fa; }
+        .sidebar {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #2c3e50 0%, #1a2632 100%);
+        }
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.8);
+            padding: 12px 20px;
+            margin: 5px 0;
+            border-radius: 10px;
+        }
+        .sidebar .nav-link:hover {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+        }
+        .info-banner {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-2 p-0">
+                <div class="sidebar p-3">
+                    <h4 class="text-white text-center mb-4">
+                        <i class="bi bi-trophy-fill"></i> EPS Manager
+                    </h4>
+                    <hr class="bg-white">
+                    <p class="text-white-50 text-center small">
+                        <i class="bi bi-person-circle"></i> <%= user.full_name %><br>
+                        <span class="badge bg-info">Élève</span>
+                    </p>
+                    <hr class="bg-white">
+                    <nav class="nav flex-column">
+                        <a class="nav-link" href="/student/dashboard">
+                            <i class="bi bi-speedometer2 me-2"></i> Tableau de bord
+                        </a>
+                        <hr class="bg-white">
+                        <a class="nav-link text-danger" href="/logout">
+                            <i class="bi bi-box-arrow-right me-2"></i> Déconnexion
+                        </a>
+                    </nav>
+                </div>
+            </div>
+            
+            <div class="col-md-10 p-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h2><i class="bi bi-pencil-square me-2"></i> Saisir mes données</h2>
+                        <p class="text-muted">
+                            <%= evaluation.class_name %> - <%= evaluation.aps_name %> - Contrôle <%= evaluation.control_number %>
+                        </p>
+                    </div>
+                    <a href="/student/dashboard" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left"></i> Retour
+                    </a>
+                </div>
+                
+                <div class="info-banner">
+                    <i class="bi bi-info-circle-fill me-2"></i>
+                    Saisissez vos performances ci-dessous. Votre note sera calculée automatiquement.
+                </div>
+                
+                <% if (error) { %>
+                    <div class="alert alert-danger"><%= error %></div>
+                <% } %>
+                <% if (success) { %>
+                    <div class="alert alert-success"><%= success %></div>
+                <% } %>
+                
+                <div class="card">
+                    <div class="card-body">
+                        <form action="/student/input-evaluation/<%= evaluation.id %>" method="POST">
+                            <h5 class="mb-3">Mes performances</h5>
+                            
+                            <% for(var j = 0; j < allCriteria.length; j++) { 
+                                var crit = allCriteria[j];
+                                if (crit.is_preset === 1) { %>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold"><%= crit.name %> (max <%= crit.max_score %> pts)</label>
+                                        
+                                        <% if (crit.formula_type === 'difficulty') { %>
+                                            <div class="row">
+                                                <div class="col-4">
+                                                    <label>Éléments A (0.75 pt)</label>
+                                                    <input type="number" name="<%= crit.id %>_A" class="form-control calc-input" step="1" min="0" value="<%= existingScores[crit.id + '_A'] || 0 %>">
+                                                </div>
+                                                <div class="col-4">
+                                                    <label>Éléments B (1.25 pt)</label>
+                                                    <input type="number" name="<%= crit.id %>_B" class="form-control calc-input" step="1" min="0" value="<%= existingScores[crit.id + '_B'] || 0 %>">
+                                                </div>
+                                                <div class="col-4">
+                                                    <label>Éléments C (1.75 pt)</label>
+                                                    <input type="number" name="<%= crit.id %>_C" class="form-control calc-input" step="1" min="0" value="<%= existingScores[crit.id + '_C'] || 0 %>">
+                                                </div>
+                                            </div>
+                                        <% } else if (crit.formula_type === 'time') { %>
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <label>Temps (secondes)</label>
+                                                    <input type="number" name="time" class="form-control calc-input" step="0.01" placeholder="Ex: 12.5" value="<%= existingScores.time || '' %>">
+                                                    <small class="text-muted">
+                                                        <% if (evaluation.aps_type === 'sprint') { %>
+                                                            Course de vitesse: 60m filles / 80m garçons
+                                                        <% } else { %>
+                                                            Course de durée: 600m filles / 1000m garçons
+                                                        <% } %>
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        <% } %>
+                                    </div>
+                                <% } else { %>
+                                    <div class="mb-3">
+                                        <label class="form-label"><%= crit.name %> (max <%= crit.max_score %> pts)</label>
+                                        <input type="number" name="criteria_<%= crit.id %>" class="form-control calc-input" step="0.5" min="0" max="<%= crit.max_score %>" value="<%= existingScores[crit.id] || 0 %>">
+                                    </div>
+                                <% } 
+                            } %>
+                            
+                            <div class="mt-4 p-3 bg-light rounded">
+                                <h5><i class="bi bi-calculator-fill"></i> Note calculée :</h5>
+                                <h2 class="text-success" id="totalScore"><%= existingTotal !== null ? existingTotal.toFixed(2) : '0.00' %></h2>
+                                <input type="hidden" name="total_score" id="totalScoreHidden" value="<%= existingTotal || 0 %>">
+                                <p class="text-muted small">La note est calculée automatiquement selon les critères</p>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary mt-3">
+                                <i class="bi bi-save"></i> Envoyer mes données
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        var allCriteria = <%= JSON.stringify(allCriteria) %>;
+        var apsType = '<%= evaluation.aps_type %>';
+        
+        function calculerNote() {
+            var total = 0;
+            
+            for(var k = 0; k < allCriteria.length; k++) {
+                var crit = allCriteria[k];
+                var score = 0;
+                
+                if (crit.is_preset === 1) {
+                    if (crit.formula_type === 'difficulty') {
+                        var a = parseFloat(document.querySelector('input[name="' + crit.id + '_A"]')?.value) || 0;
+                        var b = parseFloat(document.querySelector('input[name="' + crit.id + '_B"]')?.value) || 0;
+                        var c = parseFloat(document.querySelector('input[name="' + crit.id + '_C"]')?.value) || 0;
+                        score = (a * 0.75) + (b * 1.25) + (c * 1.75);
+                        score = Math.min(score, crit.max_score);
+                    } else if (crit.formula_type === 'time') {
+                        // Le calcul sera fait côté serveur pour utiliser le sexe
+                        score = 0;
+                    }
+                } else {
+                    var input = document.querySelector('input[name="criteria_' + crit.id + '"]');
+                    score = parseFloat(input ? input.value : 0) || 0;
+                    score = Math.min(score, crit.max_score);
+                }
+                
+                total += score;
+            }
+            
+            total = Math.min(total, 20);
+            document.getElementById('totalScore').innerHTML = total.toFixed(2);
+            document.getElementById('totalScoreHidden').value = total.toFixed(2);
+        }
+        
+        var inputs = document.querySelectorAll('.calc-input');
+        for(var i = 0; i < inputs.length; i++) {
+            inputs[i].addEventListener('input', calculerNote);
+        }
+        
+        calculerNote();
+    </script>
+</body>
+</html>
