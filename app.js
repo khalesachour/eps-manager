@@ -4,11 +4,14 @@ const path = require('path');
 const bodyParser = require('body-parser');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 
 // Configuration du moteur de templates
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Serveur démarré sur http://0.0.0.0:${PORT}`);
+});
 
 // Fichiers statiques (CSS, JS)
 app.use(express.static(path.join(__dirname, 'public')));
