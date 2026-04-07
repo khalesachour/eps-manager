@@ -5,15 +5,21 @@ const bcrypt = require('bcrypt');
 
 let db;
 
+// Déterminer le chemin de la base de données
+const isRailway = process.env.RAILWAY_ENVIRONMENT === 'true' || process.env.RAILWAY_SERVICE_ID;
+const dbPath = isRailway ? '/tmp/school.db' : path.join(__dirname, '../database/school.db');
+
+console.log(`📁 Base de données: ${dbPath}`);
+
 async function initDatabase() {
   db = await open({
-    filename: path.join(__dirname, '../database/school.db'),
+    filename: dbPath,
     driver: sqlite3.Database
   });
 
   console.log('📁 Base de données connectée');
 
-  // Création des tables
+  // Création des tables (le même code que vous avez déjà)
   await db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -22,7 +28,8 @@ async function initDatabase() {
       full_name TEXT NOT NULL,
       role TEXT CHECK(role IN ('admin', 'teacher', 'student')) NOT NULL,
       class_id INTEGER,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      is_active INTEGER DEFAULT 1
     );
 
     CREATE TABLE IF NOT EXISTS classes (
@@ -30,6 +37,7 @@ async function initDatabase() {
       name TEXT NOT NULL,
       academic_year TEXT NOT NULL,
       teacher_id INTEGER,
+      is_active INTEGER DEFAULT 0,
       FOREIGN KEY (teacher_id) REFERENCES users(id)
     );
 
@@ -38,7 +46,7 @@ async function initDatabase() {
       user_id INTEGER UNIQUE NOT NULL,
       student_number TEXT NOT NULL,
       gender TEXT CHECK(gender IN ('M', 'F')) NOT NULL,
-      birth_date DATE,
+      birth_date TEXT,
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
 
@@ -52,12 +60,13 @@ async function initDatabase() {
     CREATE TABLE IF NOT EXISTS evaluation_criteria (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       aps_id INTEGER NOT NULL,
-      teacher_id INTEGER NOT NULL,
+      teacher_id INTEGER,
       name TEXT NOT NULL,
       max_score REAL NOT NULL,
       formula_type TEXT,
       formula_params TEXT,
       is_active INTEGER DEFAULT 1,
+      is_preset INTEGER DEFAULT 0,
       FOREIGN KEY (aps_id) REFERENCES aps(id),
       FOREIGN KEY (teacher_id) REFERENCES users(id)
     );
@@ -70,6 +79,7 @@ async function initDatabase() {
       evaluation_date DATE NOT NULL,
       teacher_id INTEGER NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      student_can_input INTEGER DEFAULT 0,
       FOREIGN KEY (class_id) REFERENCES classes(id),
       FOREIGN KEY (aps_id) REFERENCES aps(id),
       FOREIGN KEY (teacher_id) REFERENCES users(id)
@@ -82,17 +92,14 @@ async function initDatabase() {
       criteria_scores TEXT NOT NULL,
       total_score REAL NOT NULL,
       FOREIGN KEY (evaluation_id) REFERENCES evaluations(id),
-      FOREIGN KEY (student_id) REFERENCES students(id)
+      FOREIGN KEY (student_id) REFERENCES students(user_id)
     );
   `);
 
-  // Vérifier si les APS existent déjà
+  // Insertion des APS par défaut si nécessaire
   const countAPS = await db.get('SELECT COUNT(*) as total FROM aps');
-  
   if (countAPS.total === 0) {
     console.log('📝 Insertion des activités sportives...');
-    
-    // Insertion une par une avec des requêtes préparées
     const apsList = [
       ['Gymnastique', 'gymnastics', '{"difficultyValues":{"A":0.75,"B":1.25,"C":1.75}}'],
       ['Course de vitesse', 'sprint', '{"formula_girls":"-1*perf + 14.9", "formula_boys":"-0.7*perf + 13.4", "max_performance_score":6}'],
@@ -101,12 +108,10 @@ async function initDatabase() {
       ['Sports collectifs de marquage', 'team_sport', '{}'],
       ['Autre activite', 'custom', '{}']
     ];
-    
     for (const aps of apsList) {
       await db.run('INSERT INTO aps (name, type, default_config) VALUES (?, ?, ?)', aps[0], aps[1], aps[2]);
     }
-    
-    console.log('✅ Activités sportives ajoutées avec les bonnes valeurs pour la gymnastique');
+    console.log('✅ Activités sportives ajoutées');
   }
 
   // Création d'un admin par défaut
@@ -118,7 +123,6 @@ async function initDatabase() {
     console.log('👨‍💼 Admin créé : admin / admin123');
   }
 
-  // Création d'un enseignant test
   const teacherExists = await db.get('SELECT id FROM users WHERE role = "teacher" LIMIT 1');
   if (!teacherExists) {
     const hashedPassword = await bcrypt.hash('teacher123', 10);
