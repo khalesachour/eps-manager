@@ -71,6 +71,9 @@ async function startServer() {
     }
   });
 
+app.get('/test', (req, res) => {
+  res.send('L\'application fonctionne !');
+});
   app.listen(PORT, () => {
     console.log(`Serveur démarré sur http://localhost:${PORT}`);
   });
