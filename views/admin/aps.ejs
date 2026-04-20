@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activités sportives - Admin EPS Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        body { background-color: #f8f9fa; }
+        .sidebar {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #2c3e50 0%, #1a2632 100%);
+        }
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.8);
+            padding: 12px 20px;
+            margin: 5px 0;
+            border-radius: 10px;
+            transition: all 0.2s;
+        }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+        .card { border: none; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.08); }
+        .btn-primary { background: linear-gradient(135deg, #f5a623 0%, #e88c00 100%); border: none; }
+        .aps-type-badge { font-size: 0.75rem; }
+        .config-preview { font-size: 0.8rem; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-2 p-0">
+                <div class="sidebar p-3">
+                    <h4 class="text-white text-center mb-4">
+                        <i class="bi bi-trophy-fill"></i> EPS Manager
+                    </h4>
+                    <hr class="bg-white">
+                    <p class="text-white-50 text-center small">
+                        <i class="bi bi-person-circle"></i> <%= user.full_name %><br>
+                        <span class="badge bg-danger">Administrateur</span>
+                    </p>
+                    <hr class="bg-white">
+                    <nav class="nav flex-column">
+                        <a class="nav-link" href="/admin/dashboard">
+                            <i class="bi bi-speedometer2 me-2"></i> Tableau de bord
+                        </a>
+                        <a class="nav-link" href="/admin/teachers">
+                            <i class="bi bi-person-badge me-2"></i> Enseignants
+                        </a>
+                        <a class="nav-link" href="/admin/users">
+                            <i class="bi bi-people me-2"></i> Comptes utilisateurs
+                        </a>
+                        <a class="nav-link" href="/admin/classes">
+                            <i class="bi bi-building me-2"></i> Classes
+                        </a>
+                        <a class="nav-link active" href="/admin/aps">
+                            <i class="bi bi-trophy me-2"></i> Activités sportives
+                        </a>
+                        <hr class="bg-white">
+                        <a class="nav-link text-danger" href="/logout">
+                            <i class="bi bi-box-arrow-right me-2"></i> Déconnexion
+                        </a>
+                    </nav>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-10 p-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h2 class="mb-1"><i class="bi bi-trophy me-2"></i> Activités sportives (APS)</h2>
+                        <p class="text-muted mb-0">Configurez les activités sportives disponibles pour les évaluations</p>
+                    </div>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createApsModal">
+                        <i class="bi bi-plus-lg me-1"></i> Nouvelle activité
+                    </button>
+                </div>
+
+                <% if (error) { %>
+                    <div class="alert alert-danger alert-dismissible fade show">
+                        <i class="bi bi-exclamation-triangle me-2"></i><%= error %>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                <% } %>
+                <% if (success) { %>
+                    <div class="alert alert-success alert-dismissible fade show">
+                        <i class="bi bi-check-circle me-2"></i><%= success %>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                <% } %>
+
+                <!-- Info sur les types -->
+                <div class="alert alert-info mb-4">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Types disponibles :</strong>
+                    <code>gymnastics</code> (Gymnastique) •
+                    <code>sprint</code> (Course de vitesse) •
+                    <code>courselongue</code> (Course de durée) •
+                    <code>team_sport</code> (Sport collectif) •
+                    <code>custom</code> (Personnalisé)
+                </div>
+
+                <div class="card">
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Nom de l'activité</th>
+                                        <th>Type</th>
+                                        <th>Évaluations</th>
+                                        <th>Configuration</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% if (apsList.length === 0) { %>
+                                        <tr>
+                                            <td colspan="5" class="text-center py-4 text-muted">
+                                                <i class="bi bi-trophy fs-1 d-block mb-2"></i>
+                                                Aucune activité sportive enregistrée
+                                            </td>
+                                        </tr>
+                                    <% } else { %>
+                                        <% apsList.forEach(function(aps) { %>
+                                        <tr>
+                                            <td><strong><i class="bi bi-trophy-fill text-warning me-2"></i><%= aps.name %></strong></td>
+                                            <td>
+                                                <%
+                                                    const typeLabels = {
+                                                        'gymnastics': { label: 'Gymnastique', color: 'purple' },
+                                                        'sprint': { label: 'Course vitesse', color: 'danger' },
+                                                        'courselongue': { label: 'Course durée', color: 'warning' },
+                                                        'team_sport': { label: 'Sport collectif', color: 'success' },
+                                                        'custom': { label: 'Personnalisé', color: 'secondary' }
+                                                    };
+                                                    const typeInfo = typeLabels[aps.type] || { label: aps.type, color: 'secondary' };
+                                                %>
+                                                <span class="badge bg-<%= typeInfo.color %> aps-type-badge"><%= typeInfo.label %></span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-light text-dark border">
+                                                    <i class="bi bi-clipboard2-check me-1"></i><%= aps.eval_count %> évaluation(s)
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <code class="config-preview" title="<%= aps.default_config %>"><%= aps.default_config %></code>
+                                            </td>
+                                            <td>
+                                                <div class="d-flex gap-1">
+                                                    <button class="btn btn-sm btn-outline-primary" title="Modifier"
+                                                        data-bs-toggle="modal" data-bs-target="#editApsModal"
+                                                        data-apsid="<%= aps.id %>"
+                                                        data-name="<%= aps.name %>"
+                                                        data-type="<%= aps.type %>"
+                                                        data-config="<%= aps.default_config ? aps.default_config.replace(/\"/g, '&quot;') : '{}' %>">
+                                                        <i class="bi bi-pencil"></i>
+                                                    </button>
+                                                    <% if (aps.eval_count === 0) { %>
+                                                    <form action="/admin/aps/delete/<%= aps.id %>" method="POST" style="display:inline;"
+                                                        onsubmit="return confirm('Supprimer l\'activité « <%= aps.name %> » ?')">
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                    <% } else { %>
+                                                        <button class="btn btn-sm btn-outline-secondary" disabled title="Impossible de supprimer (des évaluations existent)">
+                                                            <i class="bi bi-lock"></i>
+                                                        </button>
+                                                    <% } %>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <% }); %>
+                                    <% } %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Créer une APS -->
+    <div class="modal fade" id="createApsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form action="/admin/aps/create" method="POST">
+                    <div class="modal-header">
+                        <h5 class="modal-title"><i class="bi bi-trophy me-2"></i>Nouvelle activité sportive</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Nom de l'activité <span class="text-danger">*</span></label>
+                            <input type="text" name="name" class="form-control" placeholder="Ex: Handball" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Type <span class="text-danger">*</span></label>
+                            <select name="type" class="form-select" required>
+                                <option value="">— Sélectionnez un type —</option>
+                                <option value="gymnastics">gymnastics — Gymnastique</option>
+                                <option value="sprint">sprint — Course de vitesse</option>
+                                <option value="courselongue">courselongue — Course de durée</option>
+                                <option value="team_sport">team_sport — Sport collectif</option>
+                                <option value="custom">custom — Personnalisé</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Configuration JSON <small class="text-muted">(optionnel)</small></label>
+                            <textarea name="default_config" class="form-control font-monospace" rows="4" placeholder="{}">{}</textarea>
+                            <div class="form-text">Laissez <code>{}</code> si pas de configuration spéciale.</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-primary">Créer</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Modifier une APS -->
+    <div class="modal fade" id="editApsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form id="editApsForm" method="POST">
+                    <div class="modal-header">
+                        <h5 class="modal-title"><i class="bi bi-pencil me-2"></i>Modifier l'activité sportive</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Nom de l'activité <span class="text-danger">*</span></label>
+                            <input type="text" name="name" id="editApsName" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Type <span class="text-danger">*</span></label>
+                            <select name="type" id="editApsType" class="form-select" required>
+                                <option value="gymnastics">gymnastics — Gymnastique</option>
+                                <option value="sprint">sprint — Course de vitesse</option>
+                                <option value="courselongue">courselongue — Course de durée</option>
+                                <option value="team_sport">team_sport — Sport collectif</option>
+                                <option value="custom">custom — Personnalisé</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Configuration JSON</label>
+                            <textarea name="default_config" id="editApsConfig" class="form-control font-monospace" rows="5"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-primary">Enregistrer</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const editApsModal = document.getElementById('editApsModal');
+        editApsModal.addEventListener('show.bs.modal', function(event) {
+            const btn = event.relatedTarget;
+            document.getElementById('editApsName').value = btn.getAttribute('data-name');
+            document.getElementById('editApsType').value = btn.getAttribute('data-type');
+            const rawConfig = btn.getAttribute('data-config') || '{}';
+            try {
+                document.getElementById('editApsConfig').value = JSON.stringify(JSON.parse(rawConfig), null, 2);
+            } catch(e) {
+                document.getElementById('editApsConfig').value = rawConfig;
+            }
+            document.getElementById('editApsForm').action = '/admin/aps/edit/' + btn.getAttribute('data-apsid');
+        });
+    </script>
+</body>
+</html>
