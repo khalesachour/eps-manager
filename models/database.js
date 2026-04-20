@@ -114,6 +114,46 @@ async function initDatabase() {
     console.log('✅ Activités sportives ajoutées');
   }
 
+  // Insertion des critères prédéfinis (is_preset=1) pour chaque APS
+  // On vérifie pour chaque type s'il manque des critères prédéfinis
+  const apsAll = await db.all('SELECT id, type FROM aps');
+  for (const aps of apsAll) {
+    const existingPreset = await db.get(
+      'SELECT COUNT(*) as count FROM evaluation_criteria WHERE aps_id = ? AND is_preset = 1',
+      aps.id
+    );
+    if (existingPreset.count === 0) {
+      if (aps.type === 'gymnastics') {
+        await db.run(
+          `INSERT INTO evaluation_criteria (aps_id, teacher_id, name, max_score, formula_type, is_active, is_preset)
+           VALUES (?, NULL, 'Difficulté', 7, 'difficulty', 1, 1)`,
+          aps.id
+        );
+        await db.run(
+          `INSERT INTO evaluation_criteria (aps_id, teacher_id, name, max_score, formula_type, is_active, is_preset)
+           VALUES (?, NULL, 'Exécution', 13, 'manual', 1, 1)`,
+          aps.id
+        );
+        console.log(`✅ Critères prédéfinis ajoutés pour Gymnastique (id=${aps.id})`);
+      } else if (aps.type === 'sprint') {
+        await db.run(
+          `INSERT INTO evaluation_criteria (aps_id, teacher_id, name, max_score, formula_type, is_active, is_preset)
+           VALUES (?, NULL, 'Performance (temps)', 6, 'time', 1, 1)`,
+          aps.id
+        );
+        console.log(`✅ Critères prédéfinis ajoutés pour Course de vitesse (id=${aps.id})`);
+      } else if (aps.type === 'courselongue') {
+        await db.run(
+          `INSERT INTO evaluation_criteria (aps_id, teacher_id, name, max_score, formula_type, is_active, is_preset)
+           VALUES (?, NULL, 'Performance (temps)', 6, 'time', 1, 1)`,
+          aps.id
+        );
+        console.log(`✅ Critères prédéfinis ajoutés pour Course de durée (id=${aps.id})`);
+      }
+    }
+  }
+  console.log('✅ Vérification des critères prédéfinis terminée');
+
   // Création d'un admin par défaut
   const adminExists = await db.get('SELECT id FROM users WHERE role = "admin" LIMIT 1');
   if (!adminExists) {
