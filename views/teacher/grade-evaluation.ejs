@@ -1,163 +1,299 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
-    <title>Saisir les notes</title>
+    <title>Saisir les notes - EPS Manager</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
+        body { background-color: #f8f9fa; }
         .student-card {
             background: white;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+            border-left: 4px solid #667eea;
         }
         .preset-criteria {
             background: #e8f4fd;
-            padding: 10px;
+            padding: 12px 15px;
             border-radius: 8px;
             margin-bottom: 10px;
+            border-left: 3px solid #3498db;
         }
         .custom-criteria {
-            background: #f8f9fa;
-            padding: 10px;
+            background: #f0fff4;
+            padding: 12px 15px;
             border-radius: 8px;
+            border-left: 3px solid #27ae60;
+        }
+        .total-box {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 10px;
+            padding: 10px 15px;
+            display: inline-block;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        .no-criteria-warning {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 8px;
+            padding: 12px;
         }
     </style>
 </head>
 <body>
-    <div class="container mt-5">
-        <h1>Saisir les notes</h1>
-        <p><strong><%= evaluation.class_name %></strong> - <%= evaluation.aps_name %> - Contrôle <%= evaluation.control_number %></p>
-        <a href="/teacher/evaluations" class="btn btn-secondary mb-3">Retour</a>
-        
+    <div class="container mt-4 mb-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2><i class="bi bi-pencil-square me-2"></i>Saisir les notes</h2>
+                <p class="text-muted mb-0">
+                    <strong><%= evaluation.class_name %></strong> —
+                    <%= evaluation.aps_name %> —
+                    Contrôle N° <%= evaluation.control_number %>
+                </p>
+            </div>
+            <a href="/teacher/evaluations" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i> Retour
+            </a>
+        </div>
+
+        <% if (!allCriteria || allCriteria.length === 0) { %>
+            <div class="no-criteria-warning mb-4">
+                <i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>
+                <strong>Aucun critère configuré pour cette activité.</strong><br>
+                Allez d'abord dans <a href="/teacher/criteria">Configurer les critères</a> pour ajouter des critères à cette APS.
+            </div>
+        <% } %>
+
+        <% if (students.length === 0) { %>
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle me-2"></i>
+                Aucun élève dans cette classe. Ajoutez des élèves d'abord.
+            </div>
+        <% } %>
+
         <form action="/teacher/evaluations/<%= evaluation.id %>/grade" method="POST">
-            <% for(var i = 0; i < students.length; i++) { 
+
+            <% for(var i = 0; i < students.length; i++) {
                 var student = students[i];
                 var existing = gradesMap[student.id] || {};
                 var existingScores = existing.criteria_scores || {};
             %>
             <div class="student-card">
-                <h4><%= student.full_name %> (ID: <%= student.id %>)</h4>
-                <p class="text-muted">N° <%= student.student_number %> - <%= student.gender === 'M' ? 'Garçon' : 'Fille' %></p>
-                
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h5 class="mb-0"><i class="bi bi-person-circle me-2 text-primary"></i><%= student.full_name %></h5>
+                        <small class="text-muted">N° <%= student.student_number %> — <%= student.gender === 'M' ? '👦 Garçon' : '👧 Fille' %></small>
+                    </div>
+                    <div class="total-box">
+                        Note : <span id="total_score_<%= student.id %>"><%= existing.total_score || '0.00' %></span> / 20
+                    </div>
+                </div>
+                <input type="hidden" name="grades[student_<%= student.id %>][total_score]" id="total_hidden_<%= student.id %>" value="<%= existing.total_score || '0' %>">
+
                 <% if (allCriteria && allCriteria.length > 0) { %>
-                    
-                    <!-- Critères pré-programmés -->
-                    <% for(var j = 0; j < allCriteria.length; j++) { 
+
+                    <%/* ===== CRITÈRES PRÉ-PROGRAMMÉS ===== */%>
+                    <% for(var j = 0; j < allCriteria.length; j++) {
                         var crit = allCriteria[j];
                         if (crit.is_preset === 1) { %>
-                            <div class="preset-criteria">
-                                <strong><%= crit.name %> (max <%= crit.max_score %> pts)</strong>
-                                <% if (crit.formula_type === 'difficulty') { %>
-                                <div class="row mt-2">
+                        <div class="preset-criteria mb-2">
+                            <strong><i class="bi bi-star-fill text-primary me-1"></i><%= crit.name %></strong>
+                            <span class="badge bg-primary ms-2">max <%= crit.max_score %> pts</span>
+
+                            <% if (crit.formula_type === 'difficulty') { %>
+                                <%/* Gymnasique : éléments A, B, C */%>
+                                <div class="row mt-2 g-2">
                                     <div class="col-4">
-                                        <label>Éléments A (0.75 pt)</label>
-                                        <input type="number" name="grades[student_<%= student.id %>][<%= crit.id %>_A]" class="form-control gym-input" data-student="<%= student.id %>" step="1" min="0" value="<%= existingScores[crit.id + '_A'] || 0 %>">
+                                        <label class="form-label small">Éléments A <span class="text-muted">(× 0.75)</span></label>
+                                        <input type="number"
+                                               name="grades[student_<%= student.id %>][<%= crit.id %>_A]"
+                                               class="form-control grade-input"
+                                               data-student="<%= student.id %>"
+                                               step="1" min="0"
+                                               value="<%= existingScores[crit.id + '_A'] || 0 %>">
                                     </div>
                                     <div class="col-4">
-                                        <label>Éléments B (1.25 pt)</label>
-                                        <input type="number" name="grades[student_<%= student.id %>][<%= crit.id %>_B]" class="form-control gym-input" data-student="<%= student.id %>" step="1" min="0" value="<%= existingScores[crit.id + '_B'] || 0 %>">
+                                        <label class="form-label small">Éléments B <span class="text-muted">(× 1.25)</span></label>
+                                        <input type="number"
+                                               name="grades[student_<%= student.id %>][<%= crit.id %>_B]"
+                                               class="form-control grade-input"
+                                               data-student="<%= student.id %>"
+                                               step="1" min="0"
+                                               value="<%= existingScores[crit.id + '_B'] || 0 %>">
                                     </div>
                                     <div class="col-4">
-                                        <label>Éléments C (1.75 pt)</label>
-                                        <input type="number" name="grades[student_<%= student.id %>][<%= crit.id %>_C]" class="form-control gym-input" data-student="<%= student.id %>" step="1" min="0" value="<%= existingScores[crit.id + '_C'] || 0 %>">
+                                        <label class="form-label small">Éléments C <span class="text-muted">(× 1.75)</span></label>
+                                        <input type="number"
+                                               name="grades[student_<%= student.id %>][<%= crit.id %>_C]"
+                                               class="form-control grade-input"
+                                               data-student="<%= student.id %>"
+                                               step="1" min="0"
+                                               value="<%= existingScores[crit.id + '_C'] || 0 %>">
                                     </div>
                                 </div>
-                                <% } else if (crit.formula_type === 'time') { %>
+
+                            <% } else if (crit.formula_type === 'time') { %>
+                                <%/* Sprint / Course longue : temps */%>
+                                <% var apsType = evaluation.aps_type; %>
                                 <div class="row mt-2">
-                                    <div class="col-md-6">
-                                        <label>Temps (secondes)</label>
-                                        <input type="number" name="grades[student_<%= student.id %>][time]" class="form-control time-input" data-student="<%= student.id %>" step="0.01" placeholder="Ex: 12.5" value="<%= existingScores.time || '' %>">
+                                    <div class="col-md-5">
+                                        <label class="form-label small">
+                                            <% if (apsType === 'sprint') { %>
+                                                Temps en secondes
+                                                <span class="text-muted">(Filles: -1×t+14.9 / Garçons: -0.7×t+13.4)</span>
+                                            <% } else { %>
+                                                Temps en secondes
+                                                <span class="text-muted">(Filles: -0.0416×t+11.7 / Garçons: -0.0375×t+14.25)</span>
+                                            <% } %>
+                                        </label>
+                                        <input type="number"
+                                               name="grades[student_<%= student.id %>][time]"
+                                               class="form-control grade-input"
+                                               data-student="<%= student.id %>"
+                                               data-gender="<%= student.gender %>"
+                                               data-apstype="<%= apsType %>"
+                                               data-critid="<%= crit.id %>"
+                                               data-maxscore="<%= crit.max_score %>"
+                                               step="0.01" min="0"
+                                               placeholder="Ex: 12.5"
+                                               value="<%= existingScores.time || '' %>">
+                                    </div>
+                                    <div class="col-md-3 d-flex align-items-end">
+                                        <div class="text-muted small" id="time_calc_<%= student.id %>">
+                                            Score calculé : <strong id="time_score_<%= student.id %>">—</strong>
+                                        </div>
                                     </div>
                                 </div>
-                                <% } %>
-                            </div>
-                        <% } 
-                    } %>
-                    
-                    <!-- Critères personnalisés -->
-                    <div class="custom-criteria mt-3">
-                        <strong>Critères supplémentaires :</strong>
-                        <div class="row mt-2">
-                            <% for(var j = 0; j < allCriteria.length; j++) { 
+                            <% } %>
+                        </div>
+                    <% } } %>
+
+                    <%/* ===== CRITÈRES PERSONNALISÉS ===== */%>
+                    <% var hasCustom = false;
+                       for(var j = 0; j < allCriteria.length; j++) {
+                           if (allCriteria[j].is_preset === 0) { hasCustom = true; break; }
+                       }
+                       if (hasCustom) { %>
+                    <div class="custom-criteria mt-2">
+                        <strong><i class="bi bi-plus-circle-fill text-success me-1"></i>Critères supplémentaires</strong>
+                        <div class="row mt-2 g-2">
+                            <% for(var j = 0; j < allCriteria.length; j++) {
                                 var crit = allCriteria[j];
-                                if (crit.is_preset === 0) { 
+                                if (crit.is_preset === 0) {
                                     var critVal = existingScores[crit.id] || 0;
-                                %>
-                                <div class="col-md-3 mb-2">
-                                    <label><%= crit.name %> (max <%= crit.max_score %> pts)</label>
-                                    <input type="number" name="grades[student_<%= student.id %>][criteria_<%= crit.id %>]" class="form-control custom-input" data-student="<%= student.id %>" step="0.5" min="0" max="<%= crit.max_score %>" value="<%= critVal %>">
-                                </div>
-                                <% } 
-                            } %>
+                            %>
+                            <div class="col-md-3">
+                                <label class="form-label small"><%= crit.name %> <span class="text-muted">(max <%= crit.max_score %>)</span></label>
+                                <input type="number"
+                                       name="grades[student_<%= student.id %>][criteria_<%= crit.id %>]"
+                                       class="form-control grade-input"
+                                       data-student="<%= student.id %>"
+                                       step="0.5" min="0" max="<%= crit.max_score %>"
+                                       value="<%= critVal %>">
+                            </div>
+                            <% } } %>
                         </div>
                     </div>
+                    <% } %>
+
                 <% } %>
-                
-                <div class="mt-2">
-                    <label><strong>Note finale /20 :</strong></label>
-                    <input type="text" id="total_score_<%= student.id %>" class="form-control" style="width: 100px; display: inline-block; font-weight: bold; color: #28a745;" readonly value="<%= existing.total_score || '0' %>">
-                    <input type="hidden" name="grades[student_<%= student.id %>][total_score]" id="total_hidden_<%= student.id %>" value="<%= existing.total_score || '0' %>">
-                </div>
             </div>
             <% } %>
-            
-            <button type="submit" class="btn btn-primary mt-3">Sauvegarder les notes</button>
+
+            <% if (students.length > 0) { %>
+            <div class="text-center mt-4">
+                <button type="submit" class="btn btn-primary btn-lg px-5">
+                    <i class="bi bi-floppy me-2"></i>Sauvegarder toutes les notes
+                </button>
+            </div>
+            <% } %>
         </form>
     </div>
-    
+
     <script>
-        var ids = <%= JSON.stringify(students.map(s => s.id)) %>;
-        var allCriteria = <%= JSON.stringify(allCriteria) %>;
-        
-        console.log('IDs des élèves:', ids);
-        console.log('Tous les critères:', allCriteria);
-        
+        // Données de l'évaluation injectées depuis le serveur
+        var allCriteria = <%- JSON.stringify(allCriteria) %>;
+        var apsType = '<%= evaluation.aps_type %>';
+        var studentIds = <%- JSON.stringify(students.map(function(s){ return {id: s.id, gender: s.gender}; })) %>;
+
         function calculerNoteTotale(studentId) {
             var total = 0;
-            
-            for(var k = 0; k < allCriteria.length; k++) {
+
+            for (var k = 0; k < allCriteria.length; k++) {
                 var crit = allCriteria[k];
                 var score = 0;
-                
+
                 if (crit.is_preset === 1) {
+
                     if (crit.formula_type === 'difficulty') {
-                        var a = parseFloat(document.querySelector('input[name="grades[student_' + studentId + '][' + crit.id + '_A]"]')?.value) || 0;
-                        var b = parseFloat(document.querySelector('input[name="grades[student_' + studentId + '][' + crit.id + '_B]"]')?.value) || 0;
-                        var c = parseFloat(document.querySelector('input[name="grades[student_' + studentId + '][' + crit.id + '_C]"]')?.value) || 0;
+                        // Gymnastique : A, B, C
+                        var a = parseFloat(getInputVal('grades[student_' + studentId + '][' + crit.id + '_A]')) || 0;
+                        var b = parseFloat(getInputVal('grades[student_' + studentId + '][' + crit.id + '_B]')) || 0;
+                        var c = parseFloat(getInputVal('grades[student_' + studentId + '][' + crit.id + '_C]')) || 0;
                         score = (a * 0.75) + (b * 1.25) + (c * 1.75);
                         score = Math.min(score, crit.max_score);
-                        console.log('  Difficulté: A=' + a + ', B=' + b + ', C=' + c + ' -> score=' + score);
+
+                    } else if (crit.formula_type === 'time') {
+                        // Sprint ou Course longue : formule selon genre
+                        var temps = parseFloat(getInputVal('grades[student_' + studentId + '][time]')) || 0;
+                        // Récupérer le genre depuis les données
+                        var gender = 'M';
+                        for (var s = 0; s < studentIds.length; s++) {
+                            if (studentIds[s].id === studentId) { gender = studentIds[s].gender; break; }
+                        }
+                        if (apsType === 'sprint') {
+                            score = (gender === 'F') ? (-1 * temps + 14.9) : (-0.7 * temps + 13.4);
+                        } else {
+                            // courselongue
+                            score = (gender === 'F') ? (-0.0416 * temps + 11.7) : (-0.0375 * temps + 14.25);
+                        }
+                        score = Math.min(Math.max(score, 0), crit.max_score);
+
+                        // Afficher le score calculé
+                        var scoreEl = document.getElementById('time_score_' + studentId);
+                        if (scoreEl) scoreEl.textContent = score.toFixed(2) + ' pts';
                     }
-                } 
-                else {
-                    var input = document.querySelector('input[name="grades[student_' + studentId + '][criteria_' + crit.id + ']"]');
-                    score = parseFloat(input ? input.value : 0) || 0;
-                    score = Math.min(score, crit.max_score);
-                    console.log('  ' + crit.name + ': score=' + score);
+
+                } else {
+                    // Critère personnalisé
+                    var v = parseFloat(getInputVal('grades[student_' + studentId + '][criteria_' + crit.id + ']')) || 0;
+                    score = Math.min(v, crit.max_score);
                 }
-                
+
                 total += score;
             }
-            
+
             total = Math.min(total, 20);
-            var totalInput = document.getElementById('total_score_' + studentId);
-            var totalHidden = document.getElementById('total_hidden_' + studentId);
-            if (totalInput) totalInput.value = total.toFixed(2);
-            if (totalHidden) totalHidden.value = total.toFixed(2);
-            console.log('  TOTAL pour ' + studentId + ': ' + total.toFixed(2));
+
+            var el = document.getElementById('total_score_' + studentId);
+            var hid = document.getElementById('total_hidden_' + studentId);
+            if (el) el.textContent = total.toFixed(2);
+            if (hid) hid.value = total.toFixed(2);
         }
-        
-        for(var i = 0; i < ids.length; i++) {
-            var id = ids[i];
-            var inputs = document.querySelectorAll('input.gym-input[data-student="' + id + '"], input.custom-input[data-student="' + id + '"], input.time-input[data-student="' + id + '"]');
-            for(var j = 0; j < inputs.length; j++) {
-                inputs[j].addEventListener('input', (function(iid) {
-                    return function() { calculerNoteTotale(iid); };
-                })(id));
-            }
-            calculerNoteTotale(id);
+
+        function getInputVal(name) {
+            var el = document.querySelector('input[name="' + name + '"]');
+            return el ? el.value : '0';
         }
+
+        // Attacher les événements et calculer au chargement
+        document.addEventListener('DOMContentLoaded', function() {
+            var inputs = document.querySelectorAll('.grade-input');
+            inputs.forEach(function(input) {
+                var sid = parseInt(input.getAttribute('data-student'));
+                input.addEventListener('input', function() { calculerNoteTotale(sid); });
+            });
+            // Calcul initial pour afficher les notes existantes
+            studentIds.forEach(function(s) { calculerNoteTotale(s.id); });
+        });
     </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

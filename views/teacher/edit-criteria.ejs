@@ -223,9 +223,9 @@
                         <input type="text" name="criteria_${newId}_name" class="form-control crit-name" placeholder="Ex: ${getDefaultCriteriaName()}" required>
                     </div>
                     <div class="col-md-3 mb-2">
-    <label class="form-label">Note maximale</label>
-    <input type="number" name="criteria_<%= i %>_max_score" class="form-control" step="0.5" min="0" max="20" value="<%= crit.max_score %>">
-</div>
+                        <label class="form-label">Note maximale</label>
+                        <input type="number" name="criteria_${newId}_max_score" class="form-control crit-max" step="0.5" min="0" max="20" value="20">
+                    </div>
                     <div class="col-md-3 mb-2">
                         <label class="form-label">Type de formule</label>
                         <select name="criteria_${newId}_formula_type" class="form-select crit-type">
